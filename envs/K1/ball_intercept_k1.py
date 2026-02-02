@@ -350,6 +350,8 @@ class BallInterceptK1(BaseTask):
         self.projected_gravity = quat_rotate_inverse(self.base_quat, self.gravity_vec)
         self.filtered_lin_vel = self.base_lin_vel.clone()
         self.filtered_ang_vel = self.base_ang_vel.clone()
+        self.last_base_pos = self.base_pos.clone()
+        self.last_base_quat = self.base_quat.clone()
         self.curriculum_prob = torch.zeros(
             1 + 2 * self.cfg["commands"]["lin_vel_levels"],
             1 + 2 * self.cfg["commands"]["ang_vel_levels"],
@@ -570,6 +572,8 @@ class BallInterceptK1(BaseTask):
             self.root_states[env_ids, 0, 3:7], 
             self.gravity_vec[env_ids]
         )
+        self.last_base_pos[env_ids] = self.root_states[env_ids, 0, 0:3]
+        self.last_base_quat[env_ids] = self.root_states[env_ids, 0, 3:7]
         
         # Initialize ball_pos_history with current ball position (both timesteps)
         # This must be done AFTER _reset_root_states() has set the new ball position
@@ -819,6 +823,8 @@ class BallInterceptK1(BaseTask):
 
         # Store previous ball velocity in world frame *before* refreshing root states for current step
         prev_ball_lin_vel_world = self.root_states[:, 1, 7:10].clone()
+        self.last_base_pos.copy_(self.base_pos)
+        self.last_base_quat.copy_(self.base_quat)
 
         # post physics step
         self.gym.refresh_actor_root_state_tensor(self.sim)
@@ -1156,8 +1162,8 @@ class BallInterceptK1(BaseTask):
         
         # Calculate ball position 40ms ago relative to the robot
         # Use stored history position directly (history is updated in step())
-        ball_pos_history_world_frame = self.ball_pos_history[:, 1] - self.base_pos
-        relative_ball_pos_history = quat_rotate_inverse(self.base_quat, ball_pos_history_world_frame)
+        ball_pos_history_world_frame = self.ball_pos_history[:, 1] - self.last_base_pos
+        relative_ball_pos_history = quat_rotate_inverse(self.last_base_quat, ball_pos_history_world_frame)
 
         self.obs_buf = torch.cat(
             (
