@@ -435,13 +435,13 @@ class BallInterceptK1(BaseTask):
         
         # Create logs directory if it doesn't exist
         self.log_dir = "logs"
-        if not os.path.exists(self.log_dir):
-            os.makedirs(self.log_dir)
+        debug_log_dir = os.path.join(self.log_dir, "debug_csv")
+        os.makedirs(debug_log_dir, exist_ok=True)
         
         # Create CSV file with timestamp
         import time
         timestamp = time.strftime("%Y%m%d_%H%M%S")
-        self.csv_filename = os.path.join(self.log_dir, f"debug_csv/reward_log_{timestamp}.csv")
+        self.csv_filename = os.path.join(debug_log_dir, f"reward_log_{timestamp}.csv")
         
         # Prepare CSV headers
         self.csv_headers = [
@@ -1195,7 +1195,7 @@ class BallInterceptK1(BaseTask):
 
     def _reward_tracking_lin_vel_x(self):
         # Tracking of linear velocity commands (x axes)
-       return torch.exp(-torch.square(0 - self.filtered_lin_vel[:, 0]) / self.cfg["rewards"]["tracking_sigma"])
+        return torch.exp(-torch.square(0 - self.filtered_lin_vel[:, 0]) / self.cfg["rewards"]["tracking_sigma"])
 
     def _reward_tracking_lin_vel_y(self):
         # Tracking of linear velocity commands (y axes)
